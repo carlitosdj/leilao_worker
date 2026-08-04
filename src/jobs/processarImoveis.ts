@@ -148,6 +148,21 @@ export async function processarImoveis(fonteSlug: string, imoveis: ImovelRaw[]) 
     }
   }
 
+  // Desativar imóveis da fonte que não apareceram nesta rodada
+  if (imoveis.length > 0) {
+    const codigosAtivos = imoveis.map(i => i.codigoFonte);
+    const placeholders = codigosAtivos.map(() => '?').join(',');
+    const [result] = await db.query<mysql.ResultSetHeader>(
+      `UPDATE imovel SET ativo=0
+       WHERE fonteId=? AND ativo=1 AND codigoFonte NOT IN (${placeholders})`,
+      [fonteId, ...codigosAtivos]
+    );
+    const desativados = result.affectedRows;
+    if (desativados > 0) {
+      console.log(`[Worker] ${fonteSlug}: ${desativados} encerrados (não encontrados nesta rodada)`);
+    }
+  }
+
   console.log(`[Worker] ${fonteSlug}: ${novos} novos, ${atualizados} atualizados`);
   return { novos, atualizados };
 }
