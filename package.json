@@ -1,0 +1,28 @@
+{
+  "name": "leilao-worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc",
+    "atualiza": "ts-node src/atualiza.ts",
+    "seed": "ts-node src/db/seed.ts"
+  },
+  "dependencies": {
+    "@types/cheerio": "^0.22.35",
+    "axios": "^1.9.0",
+    "cheerio": "^1.2.0",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
+    "mysql2": "^3.23.0",
+    "node-cron": "^3.0.3",
+    "playwright": "^1.53.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/node-cron": "^3",
+    "ts-node": "^10",
+    "typescript": "^5"
+  }
+}

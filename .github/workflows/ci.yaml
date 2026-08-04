@@ -1,0 +1,55 @@
+name: Docker CI/CD - WORKER
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Deploy código via rsync
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+          REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          REMOTE_PORT: ${{ secrets.REMOTE_PORT }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          rsync -avz --delete \
+            --exclude 'node_modules/' \
+            --exclude '.git/' \
+            --exclude 'dist/' \
+            --exclude 'coverage/' \
+            --exclude '*.log' \
+            -e "ssh -i ~/.ssh/deploy_key -p $REMOTE_PORT -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa" \
+            ./ $REMOTE_USER@$REMOTE_HOST:/www/wwwroot/nodeapps/worker_leilao/
+
+      - name: Build Docker e restart
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.REMOTE_PORT }}
+          script: |
+            cd /www/wwwroot/nodeapps/bin_leilao
+
+            echo "Buildando imagem Docker do WORKER..."
+            docker compose -f docker-compose.prod.yml build worker
+
+            echo "Reiniciando container do WORKER..."
+            docker compose -f docker-compose.prod.yml up -d worker
+
+            echo "Limpando imagens antigas..."
+            docker image prune -f
+
+            echo "Deploy do WORKER concluído!"
+            docker compose -f docker-compose.prod.yml ps worker
