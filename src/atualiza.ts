@@ -68,30 +68,37 @@ async function main() {
   console.log(`\n${linha()}`);
   console.log('[Geo] Geocodificando imóveis sem coordenadas...');
 
-  const pool = mysql.createPool({
-    host:     process.env.DB_HOST     || 'localhost',
-    port:     Number(process.env.DB_PORT || 3306),
-    database: process.env.DB_NAME     || 'leilaodb',
-    user:     process.env.DB_USER     || 'leilao',
-    password: process.env.DB_PASSWORD || '',
-    waitForConnections: true,
-    connectionLimit: 3,
-  });
-  await geocodificarImovelSemCoordenadas(pool, 100);
-  await pool.end();
+  try {
+    const pool = mysql.createPool({
+      host:     process.env.DB_HOST     || 'localhost',
+      port:     Number(process.env.DB_PORT || 3306),
+      database: process.env.DB_NAME     || 'leilaodb',
+      user:     process.env.DB_USER     || 'leilao',
+      password: process.env.DB_PASSWORD || '',
+      waitForConnections: true,
+      connectionLimit: 3,
+    });
+    await geocodificarImovelSemCoordenadas(pool, 100);
+    await pool.end();
+  } catch (err: any) {
+    console.error(`  ✗ Geocodificação falhou: ${err.message}`);
+  }
 
   // ── Resumo ────────────────────────────────────────────────────
-  const totalNovos    = Object.values(resultados).reduce((s, r) => s + r.novos, 0);
+  const totalNovos       = Object.values(resultados).reduce((s, r) => s + r.novos, 0);
   const totalAtualizados = Object.values(resultados).reduce((s, r) => s + r.atualizados, 0);
+  const totalErros       = Object.values(resultados).reduce((s, r) => s + r.erros, 0);
+  const totalSucesso     = totalNovos + totalAtualizados;
 
   console.log(`\n${linha('━')}`);
   console.log('  Resumo final');
   console.log(linha('━'));
   for (const [slug, r] of Object.entries(resultados)) {
-    console.log(`  ${slug.padEnd(14)} → ${String(r.novos).padStart(4)} novos | ${String(r.atualizados).padStart(4)} atualiz | ${r.erros} erros`);
+    const status = r.erros > 0 && r.novos === 0 && r.atualizados === 0 ? '✗' : '✓';
+    console.log(`  ${status} ${slug.padEnd(14)} → ${String(r.novos).padStart(4)} novos | ${String(r.atualizados).padStart(4)} atualiz | ${r.erros} erros`);
   }
   console.log(linha());
-  console.log(`  Total: ${totalNovos} novos + ${totalAtualizados} atualizados`);
+  console.log(`  ${totalSucesso} sucesso \\ ${totalErros} erros`);
   console.log(linha('━'));
 
   process.exit(0);
