@@ -1,5 +1,8 @@
 import * as dotenv from 'dotenv';
+// Tenta múltiplos caminhos: funciona tanto no Docker quanto em execução manual no VPS
 dotenv.config({ path: '../.env.local' });
+dotenv.config({ path: '../bin_leilao/.env.prod', override: false });
+dotenv.config({ path: '../.env.prod', override: false });
 
 import mysql from 'mysql2/promise';
 import { scraperCaixa } from './scrapers/caixa';
