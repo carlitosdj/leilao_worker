@@ -57,9 +57,11 @@ export async function processarImoveis(fonteSlug: string, imoveis: ImovelRaw[]) 
   let atualizados = 0;
 
   for (const raw of imoveis) {
-    const desconto = raw.valorAvaliacao > 0
+    const descontoBruto = raw.valorAvaliacao > 0
       ? ((raw.valorAvaliacao - raw.valorMinimo) / raw.valorAvaliacao) * 100
       : 0;
+    // Coluna é decimal(5,2): limita a ±999.99 (dados inconsistentes da fonte)
+    const desconto = Math.max(-999.99, Math.min(999.99, descontoBruto));
     const score = calcularScore(raw);
 
     try {
@@ -165,4 +167,17 @@ export async function processarImoveis(fonteSlug: string, imoveis: ImovelRaw[]) 
 
   console.log(`[Worker] ${fonteSlug}: ${novos} novos, ${atualizados} atualizados`);
   return { novos, atualizados };
+}
+
+// Encerrar imóveis cujo leilão (última praça) já passou — vale para todas as fontes,
+// inclusive as que falharam nesta rodada ou que continuam listando leilões vencidos
+export async function encerrarVencidos(): Promise<number> {
+  const db = getPool();
+  const [result] = await db.query<mysql.ResultSetHeader>(
+    `UPDATE imovel SET ativo=0
+     WHERE ativo=1 AND COALESCE(dataLeilao2, dataLeilao) < NOW()`
+  );
+  const encerrados = result.affectedRows;
+  console.log(`[Worker] ${encerrados} imóveis encerrados por data de leilão vencida`);
+  return encerrados;
 }

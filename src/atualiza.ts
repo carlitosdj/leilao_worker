@@ -15,7 +15,7 @@ import { scraperBradesco } from './scrapers/bradesco';
 import { scraperBiasi } from './scrapers/biasi';
 import { scraperInter } from './scrapers/inter';
 import { scraperSantander } from './scrapers/santander';
-import { processarImoveis } from './jobs/processarImoveis';
+import { processarImoveis, encerrarVencidos } from './jobs/processarImoveis';
 import { geocodificarImovelSemCoordenadas } from './jobs/geocodificar';
 
 const ALVO_CAIXA = { MG: ['UBERLANDIA'] };
@@ -66,6 +66,15 @@ async function main() {
   await runScraper('SOLD / Superbid',    '[8/10]', 'sold',      scraperSold,              resultados);
   await runScraper('Bradesco',           '[9/10]', 'bradesco',  scraperBradesco,          resultados);
   await runScraper('Banco Inter',        '[10/10]', 'inter',    scraperInter,             resultados);
+
+  // ── Encerrar leilões com data vencida ─────────────────────────
+  console.log(`\n${linha()}`);
+  console.log('[Fim] Encerrando leilões com data vencida...');
+  try {
+    await encerrarVencidos();
+  } catch (err: any) {
+    console.error(`  ✗ Encerramento por data falhou: ${err.message}`);
+  }
 
   // ── Geocodificação em lote ────────────────────────────────────
   console.log(`\n${linha()}`);
